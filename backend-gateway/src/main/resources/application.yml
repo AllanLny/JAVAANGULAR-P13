@@ -1,0 +1,41 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: 
+              - "http://localhost:4200"
+              - "http://localhost"
+              - "http://frontend"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+      routes:
+        - id: user-service
+          uri: http://user-service:8081
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/api/users/(?<segment>.*), /api/users/$\{segment}
+        - id: chat-service
+          uri: http://chat-service:8082
+          predicates:
+            - Path=/api/chat/**, /ws/**
+          filters:
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/api/chat/(?<segment>.*), /api/chat/$\{segment}
+            - RewritePath=/ws/(?<segment>.*), /ws/$\{segment}
+      discovery:
+        locator:
+          enabled: true

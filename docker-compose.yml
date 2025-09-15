@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:latest
+    container_name: ycyw-postgres
+    environment:
+      POSTGRES_DB: pocp13
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 2005
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./create_db.sql:/docker-entrypoint-initdb.d/create_db.sql
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Service Gateway
+  gateway-service:
+    build: 
+      context: ./backend-gateway
+      dockerfile: Dockerfile
+    container_name: ycyw-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      user-service:
+        condition: service_healthy
+      chat-service:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8080
+      SPRING_CLOUD_GATEWAY_ROUTES[0]_ID: user-service
+      SPRING_CLOUD_GATEWAY_ROUTES[0]_URI: http://user-service:8081
+      SPRING_CLOUD_GATEWAY_ROUTES[0]_PREDICATES[0]: Path=/api/users/**
+      SPRING_CLOUD_GATEWAY_ROUTES[1]_ID: chat-service
+      SPRING_CLOUD_GATEWAY_ROUTES[1]_URI: http://chat-service:8082
+      SPRING_CLOUD_GATEWAY_ROUTES[1]_PREDICATES[0]: Path=/api/chat/**,/ws/**
+      SPRING_CLOUD_GATEWAY_ROUTES[1]_FILTERS[0]: RewritePath=/ws/(?<segment>.*), /ws/$\{segment}
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW-DETAILS: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Service Utilisateur
+  user-service:
+    build: 
+      context: ./backend-user-service
+      dockerfile: Dockerfile
+    container_name: ycyw-user
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pocp13
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 2005
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_TIME_ZONE: UTC
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW-DETAILS: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Service Chat
+  chat-service:
+    build: 
+      context: ./backend-chat-service
+      dockerfile: Dockerfile
+    container_name: ycyw-chat
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pocp13
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 2005
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_TIME_ZONE: UTC
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW-DETAILS: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8082 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Frontend Angular
+  frontend:
+    build:
+      context: ./your-car-your-way
+      dockerfile: Dockerfile
+    container_name: ycyw-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      gateway-service:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,75 @@
+<div class="chat-container">
+  <!-- En-tête -->
+  <div class="chat-header">
+    <h3>{{auth.user?.role === 'support' ? 'Interface Support' : 'Service Client'}}</h3>
+    <button (click)="logout()">Déconnexion</button>
+  </div>
+
+  <!-- Vue Support -->
+  <div class="chat-content" *ngIf="auth.user?.role === 'support'">
+    <!-- Liste des threads -->
+    <div class="threads-list">
+      <button *ngFor="let thread of getFilteredThreads()"
+              [class.active]="selectedThread?.id === thread.id"
+              (click)="selectThread(thread)"
+              class="thread-item">
+        <span class="client-id">Client #{{thread.userId}}</span>
+        <span class="thread-date">{{thread.createdAt | date:'dd/MM/yyyy HH:mm'}}</span>
+      </button>
+    </div>
+
+    <!-- Zone de chat -->
+    <div class="chat-zone">
+      <div *ngIf="!selectedThread" class="no-thread-selected">
+        <p>Sélectionnez une conversation pour commencer</p>
+      </div>
+
+      <div *ngIf="selectedThread" class="active-chat">
+        <div class="messages-container">
+          <div *ngFor="let msg of messages" 
+               class="message"
+               [class.support]="msg.senderType === 'support'"
+               [class.user]="msg.senderType === 'user'">
+            <div class="message-content">{{msg.content || msg.message}}</div>
+            <div class="timestamp">{{(msg.timestamp || msg.sentAt) | date:'HH:mm'}}</div>
+          </div>
+        </div>
+
+        <form class="reply-form" (ngSubmit)="send()">
+          <input type="text" 
+                 [(ngModel)]="newMessage" 
+                 name="message"
+                 placeholder="Répondre au client..."
+                 [disabled]="!selectedThread">
+          <button type="submit" [disabled]="!newMessage.trim() || !selectedThread">
+            Envoyer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vue Client -->
+  <div class="chat-content" *ngIf="auth.user?.role !== 'support'">
+    <div class="messages-container">
+      <div *ngFor="let msg of messages" 
+           class="message"
+           [class.support]="msg.senderType === 'support'"
+           [class.user]="msg.senderType === 'user'">
+        <div class="message-content">{{msg.content || msg.message}}</div>
+        <div class="timestamp">{{(msg.timestamp || msg.sentAt) | date:'HH:mm'}}</div>
+      </div>
+    </div>
+
+    <form class="reply-form" (ngSubmit)="send()">
+      <input type="text" 
+             [(ngModel)]="newMessage" 
+             name="message" 
+             placeholder="Votre message..."
+             autocomplete="off">
+      <button type="submit" [disabled]="!newMessage.trim()">
+        Envoyer
+      </button>
+    </form>
+  </div>
+</div>
