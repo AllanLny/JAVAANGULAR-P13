@@ -7,9 +7,10 @@ spring:
       globalcors:
         corsConfigurations:
           '[/**]':
-            allowedOrigins: 
+            allowedOrigins:
               - "http://localhost:4200"
               - "http://localhost"
+              - "http://localhost:80"
               - "http://frontend"
             allowedMethods:
               - GET
@@ -19,7 +20,6 @@ spring:
               - OPTIONS
             allowedHeaders: "*"
             allowCredentials: true
-            maxAge: 3600
       routes:
         - id: user-service
           uri: http://user-service:8081

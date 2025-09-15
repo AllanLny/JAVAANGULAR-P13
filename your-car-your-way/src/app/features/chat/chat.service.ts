@@ -1,4 +1,3 @@
-
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, Subject, BehaviorSubject } from 'rxjs';
@@ -17,27 +16,27 @@ export class ChatService {
     }
   }
 
-  private initializeWebSocketConnection() {
-    const wsUrl = `ws://${window.location.hostname}:8082/ws`;
+private initializeWebSocketConnection() {
+    const wsUrl = `ws://${window.location.host}/api/ws`;
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
-      console.log('WebSocket Connected!');
-      this.connectedSubject.next(true);
+        console.log('WebSocket Connected!');
+        this.connectedSubject.next(true);
     };
 
     this.ws.onclose = () => {
-      console.log('WebSocket Disconnected');
-      this.connectedSubject.next(false);
-      // Tentative de reconnexion après 5 secondes
-      setTimeout(() => this.initializeWebSocketConnection(), 5000);
+        console.log('WebSocket Disconnected');
+        this.connectedSubject.next(false);
+        // Tentative de reconnexion après 5 secondes
+        setTimeout(() => this.initializeWebSocketConnection(), 5000);
     };
 
     this.ws.onmessage = (event) => {
-      const chatMessage = JSON.parse(event.data) as ChatMessage;
-      this.messageSubject.next(chatMessage);
+        const chatMessage = JSON.parse(event.data);
+        this.messageSubject.next(chatMessage);
     };
-  }
+}
 
   subscribeToThread(threadId: number) {
     if (this.ws?.readyState === WebSocket.OPEN) {
