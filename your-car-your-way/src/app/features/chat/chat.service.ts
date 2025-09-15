@@ -5,7 +5,7 @@ import { ChatMessage, ChatThread } from './chat.models';
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
-  private apiUrl = '/api';
+  private apiUrl = '';  // Enlever le /api car il est déjà dans les endpoints
   private messageSubject = new Subject<ChatMessage>();
   private connectedSubject = new BehaviorSubject<boolean>(false);
   private ws: WebSocket | null = null;
